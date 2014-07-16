@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
-*  Copyright 2011 by the Radiological Society of North America
+*  Copyright 2014 by the Radiological Society of North America
 *
 *  This source software is released under the terms of the
 *  RSNA Public License (http://mirc.rsna.org/rsnapubliclicense)
@@ -227,10 +227,13 @@ public class Installer extends JFrame {
 	//Get the installer program file by looking in the user.dir for [programName]-installer.jar.
 	private File getInstallerProgramFile() {
 		cp.appendln(Color.black, "Looking for the installer program file");
-		String name = getProgramName();
-		File programFile = new File(name+"-installer.jar");
+		File programFile;
+		try { programFile = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()); }
+		catch (Exception ex) {
+			String name = getProgramName();
+			programFile = new File(name+"-installer.jar");
+		}
 		programFile = new File( programFile.getAbsolutePath() );
-
 		if (programFile.exists()) cp.appendln(Color.black, "...found "+programFile);
 		else {
 			cp.appendln(Color.red, "...unable to find the program file "+programFile+"\n...exiting.");
@@ -391,6 +394,14 @@ public class Installer extends JFrame {
 		File dicom = new File(profiles, "dicom");
 		deleteAll(dicom);
 		dicom.mkdirs();
+
+		//Remove the index.html file so it will be rebuilt from
+		//example-index.html when the system next starts.
+		File root = new File(dir, "ROOT");
+		if (root.exists()) {
+			File index = new File(root, "index.html");
+			index.delete();
+		}
 	}
 
 	//Let the user select an installation directory.
@@ -516,7 +527,7 @@ public class Installer extends JFrame {
 			File truststoreFile = new File(truststore);
 			cp.appendln(Color.black, "Looking for "+keystore);
 			if (keystoreFile.exists() || truststoreFile.exists()) {
-				cp.appendln(Color.black, "...found it [This is an EdgeServer installation");
+				cp.appendln(Color.black, "...found it [This is an EdgeServer installation]");
 				//Delete the default files, just to avoid confusion
 				File ks = new File(dir, "keystore.jks");
 				File ts = new File(dir, "truststore.jks");
@@ -578,6 +589,8 @@ public class Installer extends JFrame {
 			Properties props = new Properties();
 			String ctpHome = dir.getAbsolutePath();
 			cp.appendln(Color.black, "...CTP_HOME: "+ctpHome);
+
+			//do the parameter substitutions
 			ctpHome = ctpHome.replaceAll("\\\\", "\\\\\\\\");
 			props.put("CTP_HOME", ctpHome);
 			File javaHome = new File(System.getProperty("java.home"));
@@ -585,9 +598,15 @@ public class Installer extends JFrame {
 			cp.appendln(Color.black, "...JAVA_BIN: "+javaBin);
 			javaBin = javaBin.replaceAll("\\\\", "\\\\\\\\");
 			props.put("JAVA_BIN", javaBin);
+			bat = replace(bat, props); //do the substitutions
 
-			bat = replace(bat, props);
+			//Remove \r characters for Linux
+			bat = bat.replace("\r", "");
+
+			//Store the modified script in the linux directory
 			setFileText(install, bat);
+
+			//If this is an ISN installation, put the script in the correct place.
 			String osName = System.getProperty("os.name").toLowerCase();
 			if (programName.equals("ISN") && !osName.contains("windows")) {
 				File initDir = new File("/etc/init.d");
@@ -671,7 +690,7 @@ public class Installer extends JFrame {
 			+	"<center>"
 			+	"<h1 style=\"color:#2977b9\">" + windowTitle + "</h1>"
 			+	"Version: " + programDate + "<br>"
-			+	"Copyright 2011: RSNA<br><br>"
+			+	"Copyright 2014: RSNA<br><br>"
 
 			+	"<p>"
 
@@ -996,10 +1015,18 @@ public class Installer extends JFrame {
 	}
 
 	private void fixRSNAROOT(Element server) {
-		Element ssl = getFirstNamedChild(server, "SSL");
-		if (ssl != null) {
-			ssl.setAttribute("keystore", ssl.getAttribute("keystore").replace("RSNA_HOME", "RSNA_ROOT"));
-			ssl.setAttribute("truststore", ssl.getAttribute("truststore").replace("RSNA_HOME", "RSNA_ROOT"));
+		if (programName.equals("ISN")) {
+			Element ssl = getFirstNamedChild(server, "SSL");
+			if (ssl != null) {
+				if (System.getProperty("os.name").contains("Windows")) {
+					ssl.setAttribute("keystore", ssl.getAttribute("keystore").replace("RSNA_HOME", "RSNA_ROOT"));
+					ssl.setAttribute("truststore", ssl.getAttribute("truststore").replace("RSNA_HOME", "RSNA_ROOT"));
+				}
+				else {
+					ssl.setAttribute("keystore", "${RSNA_ROOT}/conf/keystore.jks");
+					ssl.setAttribute("truststore", "${RSNA_ROOT}/conf/truststore.jks");
+				}
+			}
 		}
 	}
 

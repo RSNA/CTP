@@ -258,17 +258,26 @@ public class FileStorageService extends AbstractPipelineStage implements Storage
 	}
 
 	/**
-	 * Get the array of links for display on the summary page.
-	 * @param userIsAdmin true if the requesting user has the admin role.
-	 * @return the array of links for display on the summary page.
+	 * Get the list of links for display on the summary page.
+	 * @param user the requesting user.
+	 * @return the list of links for display on the summary page.
 	 */
-	public SummaryLink[] getLinks(boolean userIsAdmin) {
+	public LinkedList<SummaryLink> getLinks(User user) {
+		LinkedList<SummaryLink> links = super.getLinks(user);
 		if (port > 0) {
-			return new SummaryLink[] {
-				new SummaryLink(":"+port+"/", null, "View the FileStorageService Contents", true)
-			};
+			boolean isAuthenticated = (user != null);
+			boolean admin = allowsAdminBy(user);
+			boolean canView = !requireAuthentication || (isAuthenticated && user.hasRole("read"));
+			if (isAuthenticated) links.addFirst( new SummaryLink(":"+port+"/guests", null, "Manage the Guest List", false) );
+			List<String> fsList = fsm.getFileSystemsFor(user);
+			for (String fsName : fsList) {
+				FileSystem fs = fsm.getFileSystem(fsName);
+				if (fs.getNumberOfStudies() > 0) {
+					links.addFirst( new SummaryLink(":"+port+"/storage/"+fsName, null, "View Stored Studies for "+fsName, false) );
+				}
+			}
 		}
-		else return new SummaryLink[0];
+		return links;
 	}
 
 	/**
@@ -310,18 +319,18 @@ public class FileStorageService extends AbstractPipelineStage implements Storage
 			selector.addServlet("decipher",	DecipherServlet.class);
 
 			//Instantiate the server
-			httpServer = null;
-			try { httpServer = new HttpServer(ssl, port, 4, selector); }
+			try {
+				httpServer = new HttpServer(ssl, port, 4, selector);
+				httpServer.start();
+			}
 			catch (Exception ex) {
+				httpServer = null;
 				logger.error(
 					"Unable to instantiate the HTTP Server for "
 					+name
 					+" on port "
 					+port, ex);
 			}
-
-			//Start it if possible
-			if (httpServer != null) httpServer.start();
 		}
 	}
 

@@ -65,6 +65,13 @@
 
 		<Pipeline>
 			<attr name="name" required="yes" default="Pipeline"/>
+			<attr name="admin" required="no" default="">
+				<helptext>
+					The username of a user who is allowed to access the configuration
+					pages for this pipeline. If blank, only a user with the admin role will
+					have access.
+				</helptext>
+			</attr>
 			<attr name="enabled" required="no" default="yes" options="yes|no"/>
 		</Pipeline>
 
@@ -154,6 +161,9 @@
 			<attr name="name" required="yes" default="DicomImportService"/>
 			<attr name="class" required="yes" default="org.rsna.ctp.stdstages.DicomImportService" editable="no"/>
 			<attr name="root" required="yes" default="roots/DicomImportService"/>
+			<attr name="ip" required="no" default="">
+				<helptext>The IP address on which to open the SCP</helptext>
+			</attr>
 			<attr name="port" required="yes" default="104"/>
 			<attr name="callingAETTag" required="no" default=""/>
 			<attr name="calledAETTag" required="no" default=""/>
@@ -213,6 +223,13 @@
 			</attr>
 			<attr name="auditLogID" required="yes" default=""/>
 			<attr name="auditLogTags" required="yes" default=""/>
+			<attr name="level" required="yes" default="instance" options="patient|study|instance">
+				<helptext>
+					The level at which log entries are to be made. For example, at the patient level,
+					an entry is made only when a new patient is encountered. At the instance level,
+					an entry is made for every object.
+				</helptext>
+			</attr>
 		</Processor>
 
 		<Processor>
@@ -229,6 +246,9 @@
 		<Processor>
 			<attr name="name" required="yes" default="PerformanceLogger"/>
 			<attr name="class" required="yes" default="org.rsna.ctp.stdstages.PerformanceLogger" editable="no"/>
+			<attr name="interval" required="yes" default="1">
+				<helptext>Interval (in objects received) between actions taken by this stage</helptext>
+			</attr>
 		</Processor>
 
 		<Processor>
@@ -323,7 +343,7 @@
 		<Processor>
 			<attr name="name" required="yes" default="DicomTranscoder"/>
 			<attr name="class" required="yes" default="org.rsna.ctp.stdstages.DicomTranscoder" editable="no"/>
-			<attr name="root" required="yes" default="roots/DicomDecompressor"/>
+			<attr name="root" required="yes" default="roots/DicomTranscoder"/>
 			<attr name="script" required="yes" default="scripts/DicomTranscoder.script">
 				<helptext>The script file determining whether objects are to be transcoded</helptext>
 			</attr>
@@ -339,6 +359,7 @@
 			<attr name="class" required="yes" default="org.rsna.ctp.stdstages.DicomAnonymizer" editable="no"/>
 			<attr name="root" required="yes" default="roots/DicomAnonymizer"/>
 			<attr name="lookupTable" required="yes" default="scripts/LookupTable.properties"/>
+			<attr name="dicomScript" required="no"  default=""/>
 			<attr name="script" required="yes" default="scripts/DicomAnonymizer.script">
 				<helptext>The script file containing the anonymization instructions</helptext>
 			</attr>
@@ -436,6 +457,7 @@
 			<attr name="includePatientID" required="yes" default="no" options="yes|no"/>
 			<attr name="includeModality" required="yes" default="no" options="yes|no"/>
 			<attr name="includeStudyDate" required="yes" default="no" options="yes|no"/>
+			<attr name="includeAccessionNumber" required="yes" default="no" options="yes|no"/>
 			<attr name="logSentEmails" required="yes" default="no" options="yes|no"/>
 			<attr name="quarantine" required="yes" default="quarantines/EmailService"/>
 		</Processor>
@@ -561,6 +583,9 @@
 			<attr name="acceptXmlObjects" required="no" default="yes" options="yes|no"/>
 			<attr name="acceptZipObjects" required="no" default="yes" options="yes|no"/>
 			<attr name="acceptFileObjects" required="no" default="yes" options="yes|no"/>
+			<attr name="dicomScript" required="no"  default=""/>
+			<attr name="xmlScript" required="no"  default=""/>
+			<attr name="zipScript" required="no"  default=""/>
 			<attr name="setStandardExtensions" required="yes" default="no" options="yes|no"/>
 			<attr name="filenameTag" required="no" default="">
 				<helptext>DICOM element containing the filename, if the SOPInstanceUID is not to be used</helptext>
@@ -585,7 +610,7 @@
 			<attr name="enableExport" required="no" default="yes" options="yes|no"/>
 			<attr name="dicomScript" required="no" default=""/>
 			<attr name="url" required="yes" default="">
-				<helptext>URL of the destination DICOM Storage SCP (dicom://calledAET:callingAET@ip.port)</helptext>
+				<helptext>URL of the destination DICOM Storage SCP (dicom://calledAET:callingAET@ip:port)</helptext>
 			</attr>
 			<attr name="associationTimeout" required="no" default="">
 				<helptext>The maximum time (in seconds) after the last transmission to wait
@@ -753,10 +778,10 @@
 		<auditLogTags>List of DICOM tags to log, separated by semicolons (tag1; tag2; etc.)</auditLogTags>
 		<cacheID>The id attribute of an ObjectCache stage from which to obtain PHI for the hierarchy</cacheID>
 		<calledAETTag>DICOM tag in which to store the Called AE Title (ggggeeee, optional)</calledAETTag>
-		<calledAETTag>DICOM tag in which to store the Called AE Title (ggggeeee, optional)</calledAETTag>
+		<callingAETTag>DICOM tag in which to store the Calling AE Title (ggggeeee, optional)</callingAETTag>
 		<cc>The email addresses of the copied recipients, separated by commas.</cc>
 		<connectionIPTag>DICOM tag in which to store the IP Address of the sender (ggggeeee, optional)</connectionIPTag>
-		<dicomScript>The script file determining whether DicomObjects are to be accepted for transmission</dicomScript>
+		<dicomScript>The script file determining whether DicomObjects are to be accepted for processing</dicomScript>
 		<exportDirectory>Storage directory to which selected studies can be copied for export</exportDirectory>
 		<fileStorageServiceID>The ID of the StorageService that manages objects referenced by the data stored in the database</fileStorageServiceID>
 		<filenameTag>DICOM tag in which to store the name of the file (ggggeeee or DICOM PS 3.6 keyword)</filenameTag>
@@ -809,8 +834,8 @@
 		<treeRoot>The root directory of the archive</treeRoot>
 		<username>The username for authentication, if required by the destination system (or blank if authentication is not used)</username>
 		<usersClassName>The Java class for user authentication. Do not change this unless you know what you're doing.</usersClassName>
-		<xmlScript>The script file determining whether XmlObjects are to be accepted for transmission</xmlScript>
-		<zipScript>The script file determining whether ZipObjects are to be accepted for transmission</zipScript>
+		<xmlScript>The script file determining whether XmlObjects are to be accepted for processing</xmlScript>
+		<zipScript>The script file determining whether ZipObjects are to be accepted for processing</zipScript>
 	</DefaultHelpText>
 
 	<StandardPipelines>

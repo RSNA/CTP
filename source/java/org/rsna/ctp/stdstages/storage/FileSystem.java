@@ -162,6 +162,19 @@ public class FileSystem {
 	}
 
 	/**
+	 * Get the number of studies in this FileSystem.
+	 * @return the number of studies in this FileSystem.
+	 */
+	public int getNumberOfStudies() {
+		try {
+			getIndex();
+			return uidTable.size();
+		}
+		catch (Exception unable) { }
+		return 0;
+	}
+
+	/**
 	 * Get the ImageQualifiers list for this FileSystem.
 	 * @return the ImageQualifiers list for this FileSystem.
 	 */
@@ -269,6 +282,16 @@ public class FileSystem {
 			}
 		}
 		catch (Exception notThere) { logger.debug(notThere); }
+	}
+
+	/**
+	 * Delete all the studies in the FileSystem.
+	 */
+	public synchronized void deleteAll() {
+		String[] uids = uidTable.keySet().toArray( new String[uidTable.size()] );
+		for (String uid : uids) {
+			deleteStudyByUID(uid);
+		}
 	}
 
 	/**

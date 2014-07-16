@@ -8,6 +8,7 @@
 package org.rsna.ctp.stdstages;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,11 +21,12 @@ import org.rsna.ctp.objects.ZipObject;
 import org.rsna.ctp.pipeline.AbstractPipelineStage;
 import org.rsna.ctp.pipeline.PipelineStage;
 import org.rsna.ctp.pipeline.StorageService;
+import org.rsna.ctp.servlets.SummaryLink;
 import org.rsna.ctp.stdstages.ObjectCache;
+import org.rsna.server.User;
 import org.rsna.util.FileUtil;
 import org.rsna.util.StringUtil;
 import org.w3c.dom.Element;
-import java.io.FileFilter;
 
 /**
  * A class to store objects in a directory system with no index.
@@ -222,6 +224,7 @@ public class DirectoryStorageService extends AbstractPipelineStage implements St
 				return null;
 			}
 			else {
+				savedFile.delete();
 				if (fileObject.copyTo(tempFile) && tempFile.renameTo(savedFile)) {
 					//The object was successfully saved, count it.
 					storedCount++;
@@ -233,6 +236,7 @@ public class DirectoryStorageService extends AbstractPipelineStage implements St
 				//If anything went wrong, quarantine the object and abort.
 				else {
 					logger.warn("Unable to save "+savedFile);
+					tempFile.delete();
 					if (quarantine != null) quarantine.insert(fileObject);
 					return null;
 				}
@@ -294,7 +298,6 @@ public class DirectoryStorageService extends AbstractPipelineStage implements St
 
 	private String replace(String string, DicomObject dob) {
 		try {
-
 			String singleTag = "[\\[\\(][0-9a-fA-F]{0,4}[,]?[0-9a-fA-F]{1,4}[\\]\\)]";
 			Pattern pattern = Pattern.compile( singleTag + "(::"+singleTag+")*" );
 
@@ -352,6 +355,28 @@ public class DirectoryStorageService extends AbstractPipelineStage implements St
 		else sb.append("<td>No activity</td></tr>");
 		sb.append("</table>");
 		return sb.toString();
+	}
+
+	/**
+	 * Get the list of links for display on the summary page.
+	 * @param user the requesting user.
+	 * @return the list of links for display on the summary page.
+	 */
+	public LinkedList<SummaryLink> getLinks(User user) {
+		LinkedList<SummaryLink> links = super.getLinks(user);
+		if (allowsAdminBy(user)) {
+			String qs = "?p="+pipeline.getPipelineIndex()+"&s="+stageIndex;
+			if (zipScriptFile != null) {
+				links.addFirst( new SummaryLink("/script"+qs+"&f=2", null, "Edit the Stage Zip Filter Script File", false) );
+			}
+			if (xmlScriptFile != null) {
+				links.addFirst( new SummaryLink("/script"+qs+"&f=1", null, "Edit the Stage XML Filter Script File", false) );
+			}
+			if (dicomScriptFile != null) {
+				links.addFirst( new SummaryLink("/script"+qs+"&f=0", null, "Edit the Stage DICOM Filter Script File", false) );
+			}
+		}
+		return links;
 	}
 
 }

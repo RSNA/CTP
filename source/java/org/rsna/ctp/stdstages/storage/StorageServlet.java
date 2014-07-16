@@ -102,9 +102,7 @@ public class StorageServlet extends Servlet {
 			if (fsList.size() > 0) {
 				sb.append("<table border=\"1\">");
 				//Insert a table row for each file system here
-				Iterator<String> lit = fsList.iterator();
-				while (lit.hasNext()) {
-					String fsName = lit.next();
+				for (String fsName : fsList) {
 					sb.append("<tr>");
 					sb.append("<td>");
 					sb.append("<a href=\"/storage/"+fsName+"\">"+fsName+"</a>");
@@ -132,6 +130,10 @@ public class StorageServlet extends Servlet {
 		if (key == null) key = "storageDate";
 		String fsName = path.element(1);
 		FileSystem fs = fsm.getFileSystem(fsName, false);
+
+		if (req.userHasRole("delete") && req.hasParameter("deleteAll")) {
+			fs.deleteAll();
+		}
 
 		String page = "Access to the requested File System is not allowed.";
 		if ((fs != null) && fs.allowsAccessBy(req.getUser())) {

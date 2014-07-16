@@ -7,23 +7,24 @@
 
 package org.rsna.ctp.stdplugins;
 
-import java.util.LinkedList;
 import java.io.File;
+import java.util.LinkedList;
 import jdbm.btree.BTree;
-import jdbm.htree.HTree;
 import jdbm.helper.FastIterator;
 import jdbm.helper.Tuple;
 import jdbm.helper.TupleBrowser;
+import jdbm.htree.HTree;
 import jdbm.RecordManager;
 import org.apache.log4j.Logger;
 import org.rsna.ctp.Configuration;
 import org.rsna.ctp.plugin.AbstractPlugin;
+import org.rsna.ctp.servlets.AuditLogServlet;
 import org.rsna.ctp.servlets.SummaryLink;
 import org.rsna.server.ServletSelector;
+import org.rsna.server.User;
 import org.rsna.util.JdbmUtil;
 import org.rsna.util.StringUtil;
 import org.w3c.dom.Element;
-import org.rsna.ctp.servlets.AuditLogServlet;
 
 /**
  * A Plugin to implement an audit log repository that can be
@@ -115,14 +116,16 @@ public class AuditLog extends AbstractPlugin {
 	}
 
 	/**
-	 * Get the array of links for display on the summary page.
-	 * @param userIsAdmin true if the requesting user has the admin role.
-	 * @return the array of links for display on the summary page.
+	 * Get the list of links for display on the summary page.
+	 * @param user the requesting user.
+	 * @return the list of links for display on the summary page.
 	 */
-	public SummaryLink[] getLinks(boolean userIsAdmin) {
-		return new SummaryLink[] {
-			new SummaryLink("/"+id, null, "Search the AuditLog", false)
-		};
+	public LinkedList<SummaryLink> getLinks(User user) {
+		LinkedList<SummaryLink> links = super.getLinks(user);
+		if ((user != null) && user.hasRole("admin")) {
+			links.addFirst( new SummaryLink("/"+id, null, "Search the AuditLog", false) );
+		}
+		return links;
 	}
 
 	/**
